@@ -15,6 +15,7 @@ def on_exit():
     if "mClient" in globals():
         mClient.close()
         print("MongoDB connection closed.")
+        
 atexit.register(on_exit)
 
 def local_2_mongo(m=m):
