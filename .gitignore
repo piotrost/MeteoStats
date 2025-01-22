@@ -2,6 +2,7 @@
 info/
 data/
 meteo_app/data/
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
