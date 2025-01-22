@@ -4,12 +4,16 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import io
 import numpy as np
-import sys, os
-sys.path.append(os.path.abspath(".."))
+import os
 from mongo_download import download_stations
+from redis_in_out import refresh_redis, load, meteo_param_codes
 app = Flask(__name__)
 
 # create datastore if doesn't exist
+if not os.path.exists('data'):
+    os.makedirs('data')
+if not os.path.exists('data/meteo'):
+    os.makedirs('data/meteo')
 
 # Sample meteorological data. Replace this with actual data
 data = {
@@ -33,6 +37,8 @@ def plot():
     pow = request.form['pow']
     print(f'Wybrano przedział od {start_date} do {end_date} w woj. {woj} w pow. {pow}.')
 
+    stations = download_stations(woj, pow)
+
     # Debuguj dane wejściowe
     print(f"Dostępne dane: {df}")
 
@@ -45,24 +51,24 @@ def plot():
             return Response("Brak danych w wybranym zakresie dat.", mimetype='text/plain')
 
         # Generowanie wykresu
-        fig, axs = plt.subplots(3, 1, figsize=(7.3, 9))
-        axs[0].plot(filtered_df['Date'], filtered_df['Temperature'], label='Temperature (C)', color='red')
-        axs[0].set_title('Temperature Over Time')
-        axs[0].set_xlabel('Date')
-        axs[0].set_ylabel('Temperature (C)')
-        axs[0].legend()
+        fig, axs = plt.subplots(1, 1, figsize=(7.3, 9))
+        axs.plot(filtered_df['Date'], filtered_df['Temperature'], label='Temperature (C)', color='red')
+        axs.set_title('Temperature Over Time')
+        axs.set_xlabel('Date')
+        axs.set_ylabel('Temperature (C)')
+        axs.legend()
 
-        axs[1].plot(filtered_df['Date'], filtered_df['Precipitation'], label='Precipitation (mm)', color='blue')
-        axs[1].set_title('Precipitation Over Time')
-        axs[1].set_xlabel('Date')
-        axs[1].set_ylabel('Precipitation (mm)')
-        axs[1].legend()
+        # axs[1].plot(filtered_df['Date'], filtered_df['Precipitation'], label='Precipitation (mm)', color='blue')
+        # axs[1].set_title('Precipitation Over Time')
+        # axs[1].set_xlabel('Date')
+        # axs[1].set_ylabel('Precipitation (mm)')
+        # axs[1].legend()
 
-        axs[2].plot(filtered_df['Date'], filtered_df['WindSpeed'], label='Wind Speed (km/h)', color='green')
-        axs[2].set_title('Wind Speed Over Time')
-        axs[2].set_xlabel('Date')
-        axs[2].set_ylabel('Wind Speed (km/h)')
-        axs[2].legend()
+        # axs[2].plot(filtered_df['Date'], filtered_df['WindSpeed'], label='Wind Speed (km/h)', color='green')
+        # axs[2].set_title('Wind Speed Over Time')
+        # axs[2].set_xlabel('Date')
+        # axs[2].set_ylabel('Wind Speed (km/h)')
+        # axs[2].legend()
 
         plt.tight_layout()
 
