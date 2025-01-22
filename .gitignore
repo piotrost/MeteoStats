@@ -1,6 +1,7 @@
 # custom
 info/
 data/
+meteo_app/data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

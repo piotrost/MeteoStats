@@ -4,8 +4,12 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import io
 import numpy as np
+import sys, os
+sys.path.append(os.path.abspath(".."))
 from mongo_download import download_stations
 app = Flask(__name__)
+
+# create datastore if doesn't exist
 
 # Sample meteorological data. Replace this with actual data
 data = {
