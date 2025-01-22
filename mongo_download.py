@@ -6,7 +6,7 @@ from pyproj import Transformer
 from shapely.geometry import mapping, Polygon
 
 # MongoDb
-mUri = "mongodb+srv://remigiuszszewczak:ZXuo8bMXDvt3aawp@clusterpag.slpe7.mongodb.net/?retryWrites=true&w=majority&appName=ClusterPAG"
+mUri = ""
 mLocal = "mongodb://localhost:27017"
 mClient = MongoClient(mUri, server_api=ServerApi('1'))
 m = mClient["PAG"]  # database
