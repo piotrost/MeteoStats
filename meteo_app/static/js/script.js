@@ -102,23 +102,118 @@ var jednTeryt = {
     "myśliborski", "policki", "pyrzycki", "sławieński", "stargardzki", "Szczecin",
     "szczecinecki", "świdwiński", "Świnoujście", "wałecki"
   ]
-};
+};var map, markersLayer;
 
-window.onload = function() {
-  var wojSel = document.getElementById("woj");
-  var powSel = document.getElementById("pow");
+window.onload = function () {
+    var wojSel = document.getElementById("woj");
+    var powSel = document.getElementById("pow");
+    var form = document.getElementById("dataForm");
 
-  for (var woj in jednTeryt) {
-    wojSel.options[wojSel.options.length] = new Option(woj, woj);
-  }
+    // Inicjalizacja mapy
+    map = L.map('map').setView([52.0, 19.5], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
 
-  wojSel.onchange = function() {
-    powSel.length = 1;
-    var pow = jednTeryt[this.value];
-    if (pow) {
-      pow.forEach(function(pow) {
-        powSel.options[powSel.options.length] = new Option(pow, pow);
-      });
+    // Warstwa markerów
+    markersLayer = L.layerGroup().addTo(map);
+
+    // Wypełnianie województw
+    for (var woj in jednTeryt) {
+        wojSel.options[wojSel.options.length] = new Option(woj, woj);
     }
-  };
+
+    // Aktualizacja listy powiatów po zmianie województwa
+    wojSel.onchange = function () {
+        powSel.length = 1;
+        var pow = jednTeryt[this.value];
+        if (pow) {
+            pow.forEach(function (pow) {
+                powSel.options[powSel.options.length] = new Option(pow, pow);
+            });
+        }
+    };
+
+    // Obsługa formularza
+    form.onsubmit = function (event) {
+        event.preventDefault();
+
+        const startDate = document.getElementById("start_date").value;
+        const endDate = document.getElementById("end_date").value;
+        const woj = wojSel.value;
+        const pow = powSel.value;
+
+        // Wywołanie funkcji plot
+        fetchPlot(startDate, endDate, woj, pow);
+
+        // Wywołanie funkcji do aktualizacji mapy
+        fetchStations(woj, pow);
+    };
 };
+
+// Funkcja do pobierania wykresu
+function fetchPlot(startDate, endDate, woj, pow) {
+    const formData = new FormData();
+    formData.append("start_date", startDate);
+    formData.append("end_date", endDate);
+    formData.append("woj", woj);
+    formData.append("pow", pow);
+
+    fetch("/plot", {
+        method: "POST",
+        body: formData,
+    })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            } else {
+                throw new Error("Błąd podczas generowania wykresu.");
+            }
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            document.querySelector("iframe[name='plot_frame']").src = url;
+        })
+        .catch(error => {
+            console.error("Błąd w fetchPlot:", error);
+        });
+}
+
+// Funkcja do pobierania danych stacji
+function fetchStations(woj, pow) {
+    fetch("/stations", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ woj: woj, pow: pow }),
+    })
+        .then(response => response.json())
+        .then(data => {
+            updateMap(data);
+        })
+        .catch(error => {
+            console.error("Błąd podczas pobierania danych stacji:", error);
+        });
+}
+
+// Funkcja do aktualizacji mapy
+function updateMap(stations) {
+    markersLayer.clearLayers();
+
+    stations.forEach(station => {
+        const coords = station.geometry.coordinates;
+        const name = station.properties.name;
+
+        if (coords && coords.length === 2) {
+            L.marker([coords[1], coords[0]])
+                .addTo(markersLayer)
+                .bindPopup(`Stacja: ${name}`);
+        }
+    });
+
+    if (stations.length > 0) {
+        const firstStation = stations[0].geometry.coordinates;
+        map.setView([firstStation[1], firstStation[0]], 10);
+    }
+}

@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request, Response
+from flask import Flask, render_template, request, Response, jsonify
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import io
 import numpy as np
-
+from mongo_download import download_stations
 app = Flask(__name__)
 
 # Sample meteorological data. Replace this with actual data
@@ -16,50 +16,70 @@ data = {
 }
 df = pd.DataFrame(data)
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
 
-
 @app.route('/plot', methods=['POST'])
 def plot():
+    print("Funkcja /plot została wywołana")
     start_date = request.form['start_date']
     end_date = request.form['end_date']
     woj = request.form['woj']
     pow = request.form['pow']
     print(f'Wybrano przedział od {start_date} do {end_date} w woj. {woj} w pow. {pow}.')
 
-    filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
+    # Debuguj dane wejściowe
+    print(f"Dostępne dane: {df}")
 
-    fig, axs = plt.subplots(3, 1, figsize=(7.3, 9))
+    try:
+        filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
+        print(f"Przefiltrowane dane:\n{filtered_df}")
 
-    axs[0].plot(filtered_df['Date'], filtered_df['Temperature'], label='Temperature (C)', color='red')
-    axs[0].set_title('Temperature Over Time')
-    axs[0].set_xlabel('Date')
-    axs[0].set_ylabel('Temperature (C)')
-    axs[0].legend()
+        if filtered_df.empty:
+            print("Brak danych w wybranym zakresie dat.")
+            return Response("Brak danych w wybranym zakresie dat.", mimetype='text/plain')
 
-    axs[1].plot(filtered_df['Date'], filtered_df['Precipitation'], label='Precipitation (mm)', color='blue')
-    axs[1].set_title('Precipitation Over Time')
-    axs[1].set_xlabel('Date')
-    axs[1].set_ylabel('Precipitation (mm)')
-    axs[1].legend()
+        # Generowanie wykresu
+        fig, axs = plt.subplots(3, 1, figsize=(7.3, 9))
+        axs[0].plot(filtered_df['Date'], filtered_df['Temperature'], label='Temperature (C)', color='red')
+        axs[0].set_title('Temperature Over Time')
+        axs[0].set_xlabel('Date')
+        axs[0].set_ylabel('Temperature (C)')
+        axs[0].legend()
 
-    axs[2].plot(filtered_df['Date'], filtered_df['WindSpeed'], label='Wind Speed (km/h)', color='green')
-    axs[2].set_title('Wind Speed Over Time')
-    axs[2].set_xlabel('Date')
-    axs[2].set_ylabel('Wind Speed (km/h)')
-    axs[2].legend()
+        axs[1].plot(filtered_df['Date'], filtered_df['Precipitation'], label='Precipitation (mm)', color='blue')
+        axs[1].set_title('Precipitation Over Time')
+        axs[1].set_xlabel('Date')
+        axs[1].set_ylabel('Precipitation (mm)')
+        axs[1].legend()
 
-    plt.tight_layout()
+        axs[2].plot(filtered_df['Date'], filtered_df['WindSpeed'], label='Wind Speed (km/h)', color='green')
+        axs[2].set_title('Wind Speed Over Time')
+        axs[2].set_xlabel('Date')
+        axs[2].set_ylabel('Wind Speed (km/h)')
+        axs[2].legend()
 
-    canvas = FigureCanvas(fig)
-    output = io.BytesIO()
-    canvas.print_png(output)
-    plt.close(fig)
-    return Response(output.getvalue(), mimetype='image/png')
+        plt.tight_layout()
 
+        canvas = FigureCanvas(fig)
+        output = io.BytesIO()
+        canvas.print_png(output)
+        plt.close(fig)
+
+        return Response(output.getvalue(), mimetype='image/png')
+
+    except Exception as e:
+        print(f"Błąd generowania wykresu: {e}")
+        return Response(f"Błąd: {e}", mimetype='text/plain', status=500)
+
+@app.route('/stations', methods=['POST'])
+def get_stations():
+    woj = request.json.get('woj')
+    pow = request.json.get('pow')
+    print(f'Pobieranie stacji dla województwa: {woj.lower()}, powiatu: {pow}.')
+    stations = download_stations(woj, pow)
+    return jsonify(stations)
 
 if __name__ == '__main__':
     app.run(debug=True)
