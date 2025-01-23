@@ -45,18 +45,23 @@ meteo_param_codes = {
 
 def refresh_redis():
     # clean
-    r.flushdb()
+    for key in r.scan_iter(f'{auth["machine"]}_*'):
+        r.delete(key)
 
-    # load
+    # meteo_dir
     meteo_dir = cwd_obj / "data" / "meteo"
-    for folder in os.listdir(meteo_dir):
-        if folder.is_dir():
-            foldername = folder.name
-            for file in os.listdir(meteo_dir / folder):
-                filename = file.name
-                filename = filename.split(".")[0]
-                r.sadd(foldername, filename)
     
+    # months
+    months = [f for f in meteo_dir.iterdir() if f.is_dir()]
+
+    # files
+    if len(months) > 0:
+        for month in months:
+            files = [f for f in month.iterdir() if f.is_file()]
+            if len(files) > 2:
+                for file in files:
+                    filename = file.name.split(".")[0]
+                    r.sadd(f"{auth['machine']}_{month.name}", filename)    
 
 astral_polsih_timezone = ast.zoneinfo.ZoneInfo("UTC")   # meteodane są w tym czasie
 def astral_sunlist(dateob, latlon=[52.067080, 19.479506]):
@@ -99,10 +104,7 @@ def download_meteo(year, month):
                         if last_day == day:
                             sunlist = sundict[last_day]
                         else:
-                            try:
-                                sunlist = astral_sunlist(datetime_object.date(), stationdict[line[0]])
-                            except:
-                                pass
+                            sunlist = astral_sunlist(datetime_object.date(), stationdict[int(line[0])])
                             sundict[day] = sunlist
                             last_day = day
                         
@@ -121,30 +123,30 @@ def download_meteo(year, month):
                         
                         out_csv.write(f"{line[0]},{tod},{unix_time},{line[3].replace(",", ".")}\n")  # station;time_of_the_day;unix_timestamp;value
                 
-                r.sadd(f"{year}_{month:02d}", filename)
+                r.sadd(f"{auth['machine']}_{year}_{month:02d}", filename)
     
 def load(year, month, param_code):
-    if r.exists(f"{year}_{month:02d}"):
+    if r.exists(f"{auth['machine']}_{year}_{month:02d}"):
         pass
     else:
         download_meteo(year, month)
     
-    if r.sismember(f"{year}_{month:02d}", param_code):
+    if r.sismember(f"{auth['machine']}_{year}_{month:02d}", param_code):
         dtype_dict = {
             "station": int,
             "tod": str,
             "datetime": int,
             "value": float
         }
-        return pd.read_csv(cwd + f"\\data\\meteo\\{year}_{month:02d}\\" + param_code + ".csv", header=None, dtype=dtype_dict, names=["station", "tod", "datetime", "value"])
+        return pd.read_csv(cwd + f"\\data\\meteo\\{year}_{month:02d}\\" + param_code + ".csv", header=None, dtype=dtype_dict, names=dtype_dict.keys())
     else:
         return f"Brak danych dla parametru {param_code} w {year}/{month:02d}."
 
 if __name__ == "__main__":
+    refresh_redis()
     import time
     t1 = time.time()
     load(2023, 7, "B00300S")
     t2 = time.time()
 
     print(f"Time: {t2 - t1}")
-    # refresh_redis()

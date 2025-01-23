@@ -1,15 +1,12 @@
 from flask import Flask, render_template, request, Response, jsonify, render_template_string
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import io
-import numpy as np
 import os
 from mongo_download import download_stations
 from redis_in_out import refresh_redis, load, meteo_param_codes
 import mpld3
-import datetime
 
+# the Flask app
 app = Flask(__name__)
 
 # create datastore if doesn't exist
@@ -18,14 +15,8 @@ if not os.path.exists('data'):
 if not os.path.exists('data/meteo'):
     os.makedirs('data/meteo')
 
-# Sample meteorological data. Replace this with actual data
-data = {
-    "Date": pd.date_range(start="2023-01-01", periods=365, freq="D"),
-    "Temperature": pd.Series(range(365)).apply(lambda x: 20 + 5 * np.sin(x * 2 * np.pi / 365)),
-    "Precipitation": pd.Series(range(365)).apply(lambda x: np.random.random()),
-    "WindSpeed": pd.Series(range(365)).apply(lambda x: 10 + np.random.random() * 5),
-}
-df = pd.DataFrame(data)
+# refresh redis
+refresh_redis()
 
 @app.route('/')
 def index():
@@ -33,6 +24,7 @@ def index():
 
 @app.route('/plot', methods=['POST'])
 def plot():
+    # get user input
     print("Funkcja /plot została wywołana")
     start_date_str = request.form['start_date']
     end_date_str = request.form['end_date']
@@ -40,38 +32,54 @@ def plot():
     pow = request.form['pow']
     print(f'Wybrano przedział od {start_date_str} do {end_date_str} w woj. {woj} w pow. {pow}.')
 
+    # get currently hardcoded user input
     # ***************************
-    meteo_param = "B00300S" # B00300S, B00305A, B00202A, B00702A, B00703A, B00608S, B00604S, B00606S, B00802A, B00714A, B00910A
-    aggregataion = "daily" # daily, hourly
+    meteo_param = "B00802A" # B00300S, B00305A, B00202A, B00702A, B00703A, B00608S, B00604S, B00606S, B00802A, B00714A, B00910A
+    agg_freq = "D" # D - daily, H - hourly, T
+    agg_val = "mean" # mean
     tod = ["m", "a"]       # n - night, d - dawn, m - morning, a - afternoon, e - evening
     # ***************************
 
+    # get station names int list
+    station_id_list = []
     stations = download_stations(woj, pow)
+    for station in stations:
+        station_id_list.append(int(station['properties']['name']))
+    print(f"Stacje w wybranym obszarze: {station_id_list}")
+
+    # load data
     start, end = start_date_str.split('-'), end_date_str.split('-')
     df = load(int(start[0]), int(start[1]), meteo_param)
 
     # Convert str to datetime
     pd_start = pd.Timestamp(start_date_str)
+    int_start = int(pd_start.timestamp())
     pd_end = pd.Timestamp(end_date_str)
+    int_end = int(pd_end.timestamp())
 
     # Debuguj dane wejściowe
-    print(f"Dostępne dane: {df}")
+    print(f"Dostępne dane:\n{df}")
 
     try:
+        df = df[(  df['datetime'] >= int_start) 
+                & (df['datetime'] <= int_end)
+                & (df['station'].isin(station_id_list))
+                & (df['tod'].isin(tod))]
+        
         df['datetime'] = pd.to_datetime(df['datetime'], unit='s')
-        filtered_df = df[(df['datetime'] >= pd_start) & (df['datetime'] <= pd_end)]
-        filtered_df = filtered_df[filtered_df['tod'].isin(tod)]
+        df = df.groupby(pd.Grouper(key='datetime', freq=agg_freq)).agg({
+            'value': agg_val
+        }).reset_index()
 
-        NIE FILTRUJĘ PO STACJI XD
-        print(f"Przefiltrowane dane:\n{filtered_df}")
+        print(f"Przefiltrowane dane:\n{df}")
 
-        if filtered_df.empty:
+        if df.empty:
             print("Brak danych w wybranym zakresie dat.")
             return Response("Brak danych w wybranym zakresie dat.", mimetype='text/plain')
 
         # Generowanie wykresu
         fig, axs = plt.subplots(1, 1, figsize=(7.3, 4))
-        axs.plot(filtered_df['datetime'], filtered_df['value'], label=meteo_param_codes[meteo_param], color='red')
+        axs.plot(df['datetime'], df['value'], label=meteo_param_codes[meteo_param], color='red')
         axs.set_title(meteo_param_codes[meteo_param] + " w czasie")
         axs.set_xlabel('Data')
         axs.set_ylabel(meteo_param_codes[meteo_param])
@@ -95,6 +103,7 @@ def plot():
             </html>
         """, plot_html=plot_html)
 
+    # handle exceptions
     except Exception as e:
         print(f"An error occurred: {e}")
         return Response(f"An error occurred: {e}", mimetype='text/plain', status=500)

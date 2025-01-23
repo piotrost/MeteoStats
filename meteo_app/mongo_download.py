@@ -70,7 +70,6 @@ def download_stations(name_w, name_p, m=m):
         # Konwersja ObjectId na string
         result["_id"] = str(result["_id"])
         stacje.append(result)
-    print(stacje)
 
     return stacje
 
