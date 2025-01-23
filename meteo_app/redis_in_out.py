@@ -111,6 +111,7 @@ def download_meteo(year, month):
                             except:
                                 print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n BRAK STACJI {line[0]} W BAZIE DANYCH\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                                 r.sadd(f"months_with_station_lack", filename)
+                                r.sadd(f"the_secret_stations", int(line[0]))
                                 continue
                         
                         if unix_time < sunlist[0]:
@@ -150,8 +151,9 @@ def load(year, month, param_code):
 if __name__ == "__main__":
     refresh_redis()
     import time
-    t1 = time.time()
-    load(2023, 7, "B00300S")
-    t2 = time.time()
+    for i in range(1, 13):
+        t1 = time.time()
+        _ = load(2023, i, "B00300S")
+        t2 = time.time()
 
-    print(f"Time: {t2 - t1}")
+        print(f"Time: {t2 - t1}")

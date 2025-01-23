@@ -4,7 +4,7 @@ WUT GiK PAG2 2024Z education - a student weather data analysis app
 ******************************************************************
 
 # redis
-historia wyszukiwań(cały user input, data godzina wyszukania)
+kto co ma pobrane na swoim PC
 
 # mongo
 powiaty, woj, stacje
@@ -17,6 +17,6 @@ coś z inputem i outputem w jednym oknie przeglądarki
     - zakres czasowy
     - województwo/powiat
 2. output: 
-    - wykresy (np. średnia wartość dzień/noc w kolejnych dobach)
-    - wartość (średnia, min max itp) z całego okresu
-    - mapka (wizualizacja poszczególnych stacji?)
+    - wykres (np. średnia wartość dzień/noc w kolejnych dobach)
+    - wartość (średnia, min max itp) z dni / godzin / 2:3 kwadransa
+    - mapka (wizualizacja poszczególnych stacji)
