@@ -6,9 +6,17 @@ import geopandas as gpd
 import os
 import atexit
 import json
+from pathlib import Path
+
+# current working directory
+cwd_obj = Path.cwd()
+cwd = str(cwd_obj)
+
+# authentication 
+auth = json.load(open(cwd + r"\data\keys.json"))
 
 # MongoDb
-mUri = "https://youtu.be/dQw4w9WgXcQ?si=hyraD1LbZCmFj5VS"
+mUri = auth["mongo_uri"]
 mLocal = "mongodb://localhost:27017"
 mClient = MongoClient(mUri, server_api=ServerApi('1'))
 m = mClient["PAG"]  # database
@@ -28,8 +36,7 @@ def convert_point(coordinates):
     return transformer.transform(coordinates[0], coordinates[1])
 
 
-def local_2_mongo(m=m):
-    local_dir = r"C:\pw\sem5\pag2\aprojekt_2\dane_geo\Dane"
+def local_2_mongo(local_dir, m=m):
     for filename in os.listdir(local_dir):
         if filename.endswith(".geojson") or filename.endswith(".shp") or filename.endswith(".csv"):
             path = os.path.join(local_dir, filename)
@@ -45,8 +52,9 @@ def file_to_mongo(filename, m=m):
 
         for feature in geojson_data["features"]:
             geometry = feature["geometry"]
-            if geometry["type"] == "Point":
-                geometry["coordinates"] = convert_point(geometry["coordinates"])
+            # not needed for effacility from kody_stacji.csv
+            # if geometry["type"] == "Point":
+            #     geometry["coordinates"] = convert_point(geometry["coordinates"])
 
         collection = m[name]
 
@@ -78,4 +86,4 @@ def file_to_mongo(filename, m=m):
 
 
 if __name__ == "__main__":
-    local_2_mongo()
+    local_2_mongo("data/local")
