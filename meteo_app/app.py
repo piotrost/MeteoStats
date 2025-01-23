@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, Response, jsonify
+from flask import Flask, render_template, request, Response, jsonify, render_template_string
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -7,6 +7,9 @@ import numpy as np
 import os
 from mongo_download import download_stations
 from redis_in_out import refresh_redis, load, meteo_param_codes
+import mpld3
+import datetime
+
 app = Flask(__name__)
 
 # create datastore if doesn't exist
@@ -31,19 +34,33 @@ def index():
 @app.route('/plot', methods=['POST'])
 def plot():
     print("Funkcja /plot została wywołana")
-    start_date = request.form['start_date']
-    end_date = request.form['end_date']
+    start_date_str = request.form['start_date']
+    end_date_str = request.form['end_date']
     woj = request.form['woj']
     pow = request.form['pow']
-    print(f'Wybrano przedział od {start_date} do {end_date} w woj. {woj} w pow. {pow}.')
+    print(f'Wybrano przedział od {start_date_str} do {end_date_str} w woj. {woj} w pow. {pow}.')
+
+    # ***************************
+    meteo_param = "B00300S" # B00300S, B00305A, B00202A, B00702A, B00703A, B00608S, B00604S, B00606S, B00802A, B00714A, B00910A
+    aggregataion = "daily" # daily, hourly
+    tod = ["m", "a"]       # n - night, d - dawn, m - morning, a - afternoon, e - evening
+    # ***************************
 
     stations = download_stations(woj, pow)
+    start, end = start_date_str.split('-'), end_date_str.split('-')
+    df = load(int(start[0]), int(start[1]), meteo_param)
+
+    # Convert dates to datetime
+    start_date = datetime.datetime(int(start[0]), int(start[1]), int(start[2]))
+    s_timestamp = int(start_date.timestamp())
+    end_date = datetime.datetime(int(end[0]), int(end[1]), int(end[2]))
+    e_timestamp = int(end_date.timestamp())
 
     # Debuguj dane wejściowe
     print(f"Dostępne dane: {df}")
 
     try:
-        filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
+        filtered_df = df[(df['unix_time'] >= s_timestamp) & (df['unix_time'] <= e_timestamp)]
         print(f"Przefiltrowane dane:\n{filtered_df}")
 
         if filtered_df.empty:
@@ -51,37 +68,34 @@ def plot():
             return Response("Brak danych w wybranym zakresie dat.", mimetype='text/plain')
 
         # Generowanie wykresu
-        fig, axs = plt.subplots(1, 1, figsize=(7.3, 9))
-        axs.plot(filtered_df['Date'], filtered_df['Temperature'], label='Temperature (C)', color='red')
-        axs.set_title('Temperature Over Time')
-        axs.set_xlabel('Date')
-        axs.set_ylabel('Temperature (C)')
+        fig, axs = plt.subplots(1, 1, figsize=(7.3, 4))
+        axs.plot(filtered_df['unix_time'], filtered_df['value'], label=meteo_param_codes[meteo_param], color='red')
+        axs.set_title(meteo_param_codes[meteo_param] + " w czasie")
+        axs.set_xlabel('Data')
+        axs.set_ylabel(meteo_param_codes[meteo_param])
         axs.legend()
 
-        # axs[1].plot(filtered_df['Date'], filtered_df['Precipitation'], label='Precipitation (mm)', color='blue')
-        # axs[1].set_title('Precipitation Over Time')
-        # axs[1].set_xlabel('Date')
-        # axs[1].set_ylabel('Precipitation (mm)')
-        # axs[1].legend()
+        # Convert plot to HTML
+        plot_html = mpld3.fig_to_html(fig)
 
-        # axs[2].plot(filtered_df['Date'], filtered_df['WindSpeed'], label='Wind Speed (km/h)', color='green')
-        # axs[2].set_title('Wind Speed Over Time')
-        # axs[2].set_xlabel('Date')
-        # axs[2].set_ylabel('Wind Speed (km/h)')
-        # axs[2].legend()
-
-        plt.tight_layout()
-
-        canvas = FigureCanvas(fig)
-        output = io.BytesIO()
-        canvas.print_png(output)
-        plt.close(fig)
-
-        return Response(output.getvalue(), mimetype='image/png')
+        # Render the plot in a simple HTML template
+        return render_template_string("""
+            <html>
+                <head>
+                    <title>Plot</title>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+                    <script src="https://mpld3.github.io/js/mpld3.v0.3.js"></script>
+                </head>
+                <body>
+                    <h1>Plot</h1>
+                    {{ plot_html|safe }}
+                </body>
+            </html>
+        """, plot_html=plot_html)
 
     except Exception as e:
-        print(f"Błąd generowania wykresu: {e}")
-        return Response(f"Błąd: {e}", mimetype='text/plain', status=500)
+        print(f"An error occurred: {e}")
+        return Response(f"An error occurred: {e}", mimetype='text/plain', status=500)
 
 @app.route('/stations', methods=['POST'])
 def get_stations():
