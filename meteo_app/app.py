@@ -34,14 +34,14 @@ def plot():
 
     # ***************************
     czynnik = request.form['czynnik']
-    # find key of value czynnik
-    # for key, value in meteo_param_codes.items():
-    #     if value == czynnik:
-    #         meteo_param = key
     meteo_param = [mparm[0] for mparm in meteo_param_codes.items() if mparm[1] == czynnik][0]
-    # meteo_param = "B00300S" # B00300S, B00305A, B00202A, B00702A, B00703A, B00608S, B00604S, B00606S, B00802A, B00714A, B00910A
-    agg_freq = "D" # D - daily, H - hourly, T
-    agg_val = "mean" # mean
+    
+    agg_freq_dict = {"dzienna": "D", "co godzinę": "H", "co 10 minut": "10T"}
+    agg_freq = agg_freq_dict[request.form['agg_freq']]
+
+    agg_val_dict = {"średnia": "mean", "mediana": "median", "maximum": "max", "minimum": "min"}
+    agg_val = agg_val_dict[request.form['agg_val']]
+    
     tod = ["m", "a"]       # n - night, d - dawn, m - morning, a - afternoon, e - evening
     # ***************************
 

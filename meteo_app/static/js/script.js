@@ -116,6 +116,10 @@ var czynnik_list = ["Temperatura powietrza (oficjalna)",
                     "Wilgotność względna powietrza (czujnik)",
                     "Największy poryw w okresie 10min ze stacji Synoptycznej",
                     "Zapas wody w śniegu (obserwator)"];
+
+var agg_freq_list = ["dzienna", "co godzinę", "co 10 minut"];
+
+var agg_val_list = ["średnia", "mediana", "maximum", "minimum"];
 // ********************************************
 
 window.onload = function () {
@@ -124,6 +128,8 @@ window.onload = function () {
     var form = document.getElementById("dataForm");
     // ********************************************
     var czynnikSel = document.getElementById("czynnik");
+    var agg_freqSel = document.getElementById("agg_freq");
+    var agg_valSel = document.getElementById("agg_val");
     // ********************************************
 
     // Inicjalizacja mapy
@@ -144,6 +150,15 @@ window.onload = function () {
     // Wypełnianie czynników
     for (var czynnik in czynnik_list) {
         czynnikSel.options[czynnikSel.options.length] = new Option(czynnik_list[czynnik], czynnik_list[czynnik]);
+    }
+    // Wypełnianie agregacji
+    for (var agg_freq in agg_freq_list) {
+        agg_freqSel.options[agg_freqSel.options.length] = new Option(agg_freq_list[agg_freq], agg_freq_list[agg_freq]);
+    }
+
+    // Wypełnianie wartości agregacji
+    for (var agg_val in agg_val_list) {
+        agg_valSel.options[agg_valSel.options.length] = new Option(agg_val_list[agg_val], agg_val_list[agg_val]);
     }
     // ********************************************
 
@@ -168,11 +183,13 @@ window.onload = function () {
         const pow = powSel.value;
         // ********************************************
         const czynnik = czynnikSel.value;
+        const agg_freq = agg_freqSel.value;
+        const agg_val = agg_valSel.value;
         // ********************************************
 
         // Wywołanie funkcji plot
         // ********************************************
-        fetchPlot(startDate, endDate, woj, pow, czynnik);
+        fetchPlot(startDate, endDate, woj, pow, czynnik, agg_freq, agg_val);
         // ********************************************
 
         // Wywołanie funkcji do aktualizacji mapy
@@ -182,7 +199,7 @@ window.onload = function () {
 
 // Funkcja do pobierania wykresu
 // ********************************************
-function fetchPlot(startDate, endDate, woj, pow, czynnik) {
+function fetchPlot(startDate, endDate, woj, pow, czynnik, agg_freq, agg_val) {
 // ********************************************
     const formData = new FormData();
     formData.append("start_date", startDate);
@@ -191,6 +208,8 @@ function fetchPlot(startDate, endDate, woj, pow, czynnik) {
     formData.append("pow", pow);
     // ********************************************
     formData.append("czynnik", czynnik);
+    formData.append("agg_freq", agg_freq);
+    formData.append("agg_val", agg_val);
     // ********************************************
 
     fetch("/plot", {
