@@ -185,11 +185,18 @@ window.onload = function () {
         const czynnik = czynnikSel.value;
         const agg_freq = agg_freqSel.value;
         const agg_val = agg_valSel.value;
+
+        // Collect checkbox values
+        var checkboxes = document.querySelectorAll('input[name="tod"]:checked');
+        var selectedTimesOfDay = [];
+        checkboxes.forEach(function (checkbox) {
+            selectedTimesOfDay.push(checkbox.value);
+        });
         // ********************************************
 
         // Wywołanie funkcji plot
         // ********************************************
-        fetchPlot(startDate, endDate, woj, pow, czynnik, agg_freq, agg_val);
+        fetchPlot(startDate, endDate, woj, pow, czynnik, agg_freq, agg_val, selectedTimesOfDay);
         // ********************************************
 
         // Wywołanie funkcji do aktualizacji mapy
@@ -199,7 +206,7 @@ window.onload = function () {
 
 // Funkcja do pobierania wykresu
 // ********************************************
-function fetchPlot(startDate, endDate, woj, pow, czynnik, agg_freq, agg_val) {
+function fetchPlot(startDate, endDate, woj, pow, czynnik, agg_freq, agg_val, selectedTimesOfDay) {
 // ********************************************
     const formData = new FormData();
     formData.append("start_date", startDate);
@@ -210,6 +217,7 @@ function fetchPlot(startDate, endDate, woj, pow, czynnik, agg_freq, agg_val) {
     formData.append("czynnik", czynnik);
     formData.append("agg_freq", agg_freq);
     formData.append("agg_val", agg_val);
+    formData.append("tod", JSON.stringify(selectedTimesOfDay));
     // ********************************************
 
     fetch("/plot", {

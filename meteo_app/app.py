@@ -5,6 +5,7 @@ import os
 from mongo_download import download_stations
 from redis_in_out import refresh_redis, load, meteo_param_codes
 import mpld3
+import json
 
 # the Flask app
 app = Flask(__name__)
@@ -42,7 +43,9 @@ def plot():
     agg_val_dict = {"średnia": "mean", "mediana": "median", "maximum": "max", "minimum": "min"}
     agg_val = agg_val_dict[request.form['agg_val']]
     
-    tod = ["m", "a"]       # n - night, d - dawn, m - morning, a - afternoon, e - evening
+    tod_dict = {"noc": "n", "świt": "d", "przedpołudnie": "m", "popołudnie": "a", "wieczór": "e"}
+    tod = json.loads(request.form['tod'])
+    # tod = tod.values()
     # ***************************
 
     # get station names int list
