@@ -113,7 +113,7 @@ def download_meteo(year, month):
                                 sundict[day] = sunlist
                             except:
                                 TheFlagOfTheHiddenStations = True
-                                r.sadd(f"TheMonthsWithTheHiddenStations", filename)
+                                r.sadd(f"TheMonthsWithTheHiddenStations", f"{year}_{month:02d}")
                                 r.sadd(f"TheHiddenStations", int(line[0]))
                                 continue
                         
