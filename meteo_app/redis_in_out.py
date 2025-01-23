@@ -76,6 +76,9 @@ def download_meteo(year, month):
     response = requests.get(f"https://danepubliczne.imgw.pl/datastore/getfiledown/Arch/Telemetria/Meteo/{year}/Meteo_{year}-{month:02d}.zip")
     sundict = {}
     stationdict = download_all_stations()
+
+    # missing data flag
+    TheFlagOfTheHiddenStations = False
     
     # open in csv
     with zipfile.ZipFile(io.BytesIO(response.content)) as zip:
@@ -109,9 +112,9 @@ def download_meteo(year, month):
                                 sunlist = astral_sunlist(datetime_object.date(), stationdict[int(line[0])])
                                 sundict[day] = sunlist
                             except:
-                                print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n BRAK STACJI {line[0]} W BAZIE DANYCH\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                                r.sadd(f"months_with_station_lack", filename)
-                                r.sadd(f"the_secret_stations", int(line[0]))
+                                TheFlagOfTheHiddenStations = True
+                                r.sadd(f"TheMonthsWithTheHiddenStations", filename)
+                                r.sadd(f"TheHiddenStations", int(line[0]))
                                 continue
                         
                         if unix_time < sunlist[0]:
@@ -130,6 +133,9 @@ def download_meteo(year, month):
                         out_csv.write(f"{line[0]},{tod},{unix_time},{line[3].replace(",", ".")}\n")  # station;time_of_the_day;unix_timestamp;value
                 
                 r.sadd(f"{auth['machine']}_{year}_{month:02d}", filename)
+        
+        if TheFlagOfTheHiddenStations:
+            print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n BRAK CZĘSCI STACJI W BAZIE DANYCH DLA:\n{year}_{month:02d}\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     
 def load(year, month, param_code):
     if r.exists(f"{auth['machine']}_{year}_{month:02d}"):
@@ -151,9 +157,9 @@ def load(year, month, param_code):
 if __name__ == "__main__":
     refresh_redis()
     import time
-    for i in range(1, 13):
+    for i in range(12, 13):
         t1 = time.time()
-        _ = load(2023, i, "B00300S")
+        _ = load(2024, i, "B00300S")
         t2 = time.time()
 
         print(f"Time: {t2 - t1}")
