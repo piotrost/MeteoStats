@@ -50,17 +50,19 @@ def plot():
     start, end = start_date_str.split('-'), end_date_str.split('-')
     df = load(int(start[0]), int(start[1]), meteo_param)
 
-    # Convert dates to datetime
-    start_date = datetime.datetime(int(start[0]), int(start[1]), int(start[2]))
-    s_timestamp = int(start_date.timestamp())
-    end_date = datetime.datetime(int(end[0]), int(end[1]), int(end[2]))
-    e_timestamp = int(end_date.timestamp())
+    # Convert str to datetime
+    pd_start = pd.Timestamp(start_date_str)
+    pd_end = pd.Timestamp(end_date_str)
 
     # Debuguj dane wejściowe
     print(f"Dostępne dane: {df}")
 
     try:
-        filtered_df = df[(df['unix_time'] >= s_timestamp) & (df['unix_time'] <= e_timestamp)]
+        df['datetime'] = pd.to_datetime(df['datetime'], unit='s')
+        filtered_df = df[(df['datetime'] >= pd_start) & (df['datetime'] <= pd_end)]
+        filtered_df = filtered_df[filtered_df['tod'].isin(tod)]
+
+        NIE FILTRUJĘ PO STACJI XD
         print(f"Przefiltrowane dane:\n{filtered_df}")
 
         if filtered_df.empty:
@@ -69,7 +71,7 @@ def plot():
 
         # Generowanie wykresu
         fig, axs = plt.subplots(1, 1, figsize=(7.3, 4))
-        axs.plot(filtered_df['unix_time'], filtered_df['value'], label=meteo_param_codes[meteo_param], color='red')
+        axs.plot(filtered_df['datetime'], filtered_df['value'], label=meteo_param_codes[meteo_param], color='red')
         axs.set_title(meteo_param_codes[meteo_param] + " w czasie")
         axs.set_xlabel('Data')
         axs.set_ylabel(meteo_param_codes[meteo_param])

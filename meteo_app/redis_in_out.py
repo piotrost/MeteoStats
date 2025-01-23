@@ -133,10 +133,10 @@ def load(year, month, param_code):
         dtype_dict = {
             "station": int,
             "tod": str,
-            "unix_time": int,
+            "datetime": int,
             "value": float
         }
-        return pd.read_csv(cwd + f"\\data\\meteo\\{year}_{month:02d}\\" + param_code + ".csv", header=None, dtype=dtype_dict)
+        return pd.read_csv(cwd + f"\\data\\meteo\\{year}_{month:02d}\\" + param_code + ".csv", header=None, dtype=dtype_dict, names=["station", "tod", "datetime", "value"])
     else:
         return f"Brak danych dla parametru {param_code} w {year}/{month:02d}."
 
@@ -147,3 +147,4 @@ if __name__ == "__main__":
     t2 = time.time()
 
     print(f"Time: {t2 - t1}")
+    # refresh_redis()
