@@ -104,9 +104,14 @@ def download_meteo(year, month):
                         if last_day == day:
                             sunlist = sundict[last_day]
                         else:
-                            sunlist = astral_sunlist(datetime_object.date(), stationdict[int(line[0])])
-                            sundict[day] = sunlist
                             last_day = day
+                            try:
+                                sunlist = astral_sunlist(datetime_object.date(), stationdict[int(line[0])])
+                                sundict[day] = sunlist
+                            except:
+                                print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n BRAK STACJI {line[0]} W BAZIE DANYCH\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                                r.sadd(f"months_with_station_lack", filename)
+                                continue
                         
                         if unix_time < sunlist[0]:
                             tod = "n"

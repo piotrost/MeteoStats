@@ -24,7 +24,7 @@ def index():
 
 @app.route('/plot', methods=['POST'])
 def plot():
-    # get user input
+    # user input
     print("Funkcja /plot została wywołana")
     start_date_str = request.form['start_date']
     end_date_str = request.form['end_date']
@@ -32,9 +32,8 @@ def plot():
     pow = request.form['pow']
     print(f'Wybrano przedział od {start_date_str} do {end_date_str} w woj. {woj} w pow. {pow}.')
 
-    # get currently hardcoded user input
     # ***************************
-    meteo_param = "B00802A" # B00300S, B00305A, B00202A, B00702A, B00703A, B00608S, B00604S, B00606S, B00802A, B00714A, B00910A
+    meteo_param = "B00300S" # B00300S, B00305A, B00202A, B00702A, B00703A, B00608S, B00604S, B00606S, B00802A, B00714A, B00910A
     agg_freq = "D" # D - daily, H - hourly, T
     agg_val = "mean" # mean
     tod = ["m", "a"]       # n - night, d - dawn, m - morning, a - afternoon, e - evening
@@ -47,9 +46,27 @@ def plot():
         station_id_list.append(int(station['properties']['name']))
     print(f"Stacje w wybranym obszarze: {station_id_list}")
 
-    # load data
+    # get date elements
     start, end = start_date_str.split('-'), end_date_str.split('-')
-    df = load(int(start[0]), int(start[1]), meteo_param)
+    m_start, m_end = int(start[1]), int(end[1])
+    y_start, y_end = int(start[0]), int(end[0])
+
+    if m_start != m_end or y_start != y_end:
+        df_list = []
+        y_range = range(y_start, y_end+1)
+        m = m_start
+        for y in y_range:
+            while y != y_end or m != m_end+1:
+                df_part = load(y, m, meteo_param)
+                df_list.append(df_part)
+                print(f"\nZaładowano dane z {y}_{m:02d}.\n")
+                if m == 12:
+                    break
+                else:
+                    m += 1
+        df = pd.concat(df_list, ignore_index=True)
+    else:
+        df = load(int(start[0]), int(start[1]), meteo_param)
 
     # Convert str to datetime
     pd_start = pd.Timestamp(start_date_str)
@@ -61,18 +78,20 @@ def plot():
     print(f"Dostępne dane:\n{df}")
 
     try:
+        # Filter data
         df = df[(  df['datetime'] >= int_start) 
                 & (df['datetime'] <= int_end)
                 & (df['station'].isin(station_id_list))
                 & (df['tod'].isin(tod))]
         
+        # Aggregating data
         df['datetime'] = pd.to_datetime(df['datetime'], unit='s')
         df = df.groupby(pd.Grouper(key='datetime', freq=agg_freq)).agg({
             'value': agg_val
         }).reset_index()
 
+        # Debuguj przefiltrowane dane
         print(f"Przefiltrowane dane:\n{df}")
-
         if df.empty:
             print("Brak danych w wybranym zakresie dat.")
             return Response("Brak danych w wybranym zakresie dat.", mimetype='text/plain')
@@ -87,7 +106,6 @@ def plot():
 
         # Convert plot to HTML
         plot_html = mpld3.fig_to_html(fig)
-
         # Render the plot in a simple HTML template
         return render_template_string("""
             <html>
