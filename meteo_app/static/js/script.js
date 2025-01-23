@@ -104,10 +104,27 @@ var jednTeryt = {
   ]
 };var map, markersLayer;
 
+// ********************************************
+var czynnik_list = ["Temperatura powietrza (oficjalna)",
+                    "Temperatura gruntu (czujnik)",
+                    "Kierunek wiatru (czujnik)",
+                    "Średnia prędkość wiatru czujnik 10 minut",
+                    "Prędkość maksymalna (czujnik)",
+                    "Suma opadu 10 minutowego",
+                    "Suma opadu dobowego",
+                    "Suma opadu godzinowego",
+                    "Wilgotność względna powietrza (czujnik)",
+                    "Największy poryw w okresie 10min ze stacji Synoptycznej",
+                    "Zapas wody w śniegu (obserwator)"];
+// ********************************************
+
 window.onload = function () {
     var wojSel = document.getElementById("woj");
     var powSel = document.getElementById("pow");
     var form = document.getElementById("dataForm");
+    // ********************************************
+    var czynnikSel = document.getElementById("czynnik");
+    // ********************************************
 
     // Inicjalizacja mapy
     map = L.map('map').setView([52.0, 19.5], 6);
@@ -122,6 +139,13 @@ window.onload = function () {
     for (var woj in jednTeryt) {
         wojSel.options[wojSel.options.length] = new Option(woj, woj);
     }
+
+    // ********************************************
+    // Wypełnianie czynników
+    for (var czynnik in czynnik_list) {
+        czynnikSel.options[czynnikSel.options.length] = new Option(czynnik_list[czynnik], czynnik_list[czynnik]);
+    }
+    // ********************************************
 
     // Aktualizacja listy powiatów po zmianie województwa
     wojSel.onchange = function () {
@@ -142,9 +166,14 @@ window.onload = function () {
         const endDate = document.getElementById("end_date").value;
         const woj = wojSel.value;
         const pow = powSel.value;
+        // ********************************************
+        const czynnik = czynnikSel.value;
+        // ********************************************
 
         // Wywołanie funkcji plot
-        fetchPlot(startDate, endDate, woj, pow);
+        // ********************************************
+        fetchPlot(startDate, endDate, woj, pow, czynnik);
+        // ********************************************
 
         // Wywołanie funkcji do aktualizacji mapy
         fetchStations(woj, pow);
@@ -152,12 +181,17 @@ window.onload = function () {
 };
 
 // Funkcja do pobierania wykresu
-function fetchPlot(startDate, endDate, woj, pow) {
+// ********************************************
+function fetchPlot(startDate, endDate, woj, pow, czynnik) {
+// ********************************************
     const formData = new FormData();
     formData.append("start_date", startDate);
     formData.append("end_date", endDate);
     formData.append("woj", woj);
     formData.append("pow", pow);
+    // ********************************************
+    formData.append("czynnik", czynnik);
+    // ********************************************
 
     fetch("/plot", {
         method: "POST",

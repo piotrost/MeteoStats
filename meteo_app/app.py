@@ -33,7 +33,13 @@ def plot():
     print(f'Wybrano przedział od {start_date_str} do {end_date_str} w woj. {woj} w pow. {pow}.')
 
     # ***************************
-    meteo_param = "B00300S" # B00300S, B00305A, B00202A, B00702A, B00703A, B00608S, B00604S, B00606S, B00802A, B00714A, B00910A
+    czynnik = request.form['czynnik']
+    # find key of value czynnik
+    # for key, value in meteo_param_codes.items():
+    #     if value == czynnik:
+    #         meteo_param = key
+    meteo_param = [mparm[0] for mparm in meteo_param_codes.items() if mparm[1] == czynnik][0]
+    # meteo_param = "B00300S" # B00300S, B00305A, B00202A, B00702A, B00703A, B00608S, B00604S, B00606S, B00802A, B00714A, B00910A
     agg_freq = "D" # D - daily, H - hourly, T
     agg_val = "mean" # mean
     tod = ["m", "a"]       # n - night, d - dawn, m - morning, a - afternoon, e - evening
@@ -103,6 +109,7 @@ def plot():
         axs.set_xlabel('Data')
         axs.set_ylabel(meteo_param_codes[meteo_param])
         axs.legend()
+        axs.grid(True)
 
         # Convert plot to HTML
         plot_html = mpld3.fig_to_html(fig)
