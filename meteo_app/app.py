@@ -62,17 +62,20 @@ def plot():
 
     if m_start != m_end or y_start != y_end:
         df_list = []
-        y_range = range(y_start, y_end+1)
         m = m_start
-        for y in y_range:
-            while y != y_end or m != m_end+1:
-                df_part = load(y, m, meteo_param)
-                df_list.append(df_part)
-                print(f"\nZaładowano dane z {y}_{m:02d}.\n")
-                if m == 12:
-                    break
+        y = y_start
+        while y != y_end or m != m_end+1:
+            df_part = load(y, m, meteo_param)
+            df_list.append(df_part)
+            print(f"\nZaładowano dane z {y}_{m:02d}.\n")
+            if m == 12:
+                if y != y_end:
+                    m = 1
+                    y += 1
                 else:
-                    m += 1
+                    break
+            else:
+                m += 1
         df = pd.concat(df_list, ignore_index=True)
     else:
         df = load(int(start[0]), int(start[1]), meteo_param)
