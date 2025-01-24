@@ -79,6 +79,7 @@ def download_meteo(year, month):
 
     # missing data flag
     TheFlagOfTheHiddenStations = False
+    S = set()
     
     # open in csv
     with zipfile.ZipFile(io.BytesIO(response.content)) as zip:
@@ -113,8 +114,7 @@ def download_meteo(year, month):
                                 sundict[day] = sunlist
                             except:
                                 TheFlagOfTheHiddenStations = True
-                                r.sadd(f"TheMonthsWithTheHiddenStations", f"{year}_{month:02d}")
-                                r.sadd(f"TheHiddenStations", int(line[0]))
+                                S.add(int(line[0]))
                                 continue
                         
                         if unix_time < sunlist[0]:
@@ -135,6 +135,9 @@ def download_meteo(year, month):
                 r.sadd(f"{auth['machine']}_{year}_{month:02d}", filename)
         
         if TheFlagOfTheHiddenStations:
+            r.sadd(f"TheMonthsWithTheHiddenStations", f"{year}_{month:02d}")
+            for s in S:
+                r.sadd(f"TheHiddenStations", s)
             print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n BRAK CZĘSCI STACJI W BAZIE DANYCH DLA:\n{year}_{month:02d}\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     
 def load(year, month, param_code):
